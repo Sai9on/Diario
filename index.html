@@ -102,11 +102,40 @@ label{display:block;font-size:13px;color:#626d7e;margin:12px 0 5px}
 .manager-row{padding:12px 0;border-bottom:1px solid #edf0f4}
 .manager-info{font-size:12px;color:#8992a1;margin:5px 0 9px}
 .manager-row button{padding:7px 13px}
+
+/* Pagina autonoma degli obiettivi */
+.objectives-page{display:none;min-height:100vh;background:#f5f6f8;padding-bottom:35px}
+.objectives-header{background:white;padding:18px 16px;border-bottom:1px solid #e8eaf0;display:flex;align-items:center;gap:14px}
+.objectives-header button{border:0;background:#f0f2f6;border-radius:10px;padding:9px 13px;color:#30394a}
+.objectives-header h2{flex:1;text-align:center;font-size:17px;margin-right:45px}
+.objectives-content{max-width:680px;margin:auto;padding:16px 12px}
+.objective-card{background:white;border-radius:14px;padding:16px;margin-bottom:11px;box-shadow:0 2px 8px #20273506}
+.objective-card-head{display:flex;align-items:center;gap:8px}
+.objective-title{flex:1;font-weight:600;font-size:16px;overflow-wrap:anywhere}
+.objective-progress{font-size:12px;color:#8992a1;margin-top:7px}
+.objective-actions{display:flex;gap:5px}
+.objective-actions button,.objective-item-actions button{border:0;background:#f0f2f6;color:#626d7e;border-radius:8px;padding:7px 9px}
+.objective-detail{background:white;border-radius:14px;padding:16px;box-shadow:0 2px 8px #20273506}
+.objective-detail-title{font-size:19px;font-weight:700;margin-bottom:15px;overflow-wrap:anywhere}
+.objective-element{padding:12px 0;border-bottom:1px solid #edf0f4}
+.objective-element-line{display:flex;align-items:center;gap:9px}
+.objective-element-line input,.objective-subitem input{width:18px;height:18px;accent-color:#3978e8;flex-shrink:0}
+.objective-element-text{flex:1;overflow-wrap:anywhere}
+.objective-element-text.done,.objective-subitem.done span{text-decoration:line-through;color:#9ba2ad}
+.objective-item-actions{display:flex;gap:3px}
+.objective-subitems{margin:8px 0 0 28px;padding-left:12px;border-left:2px solid #edf0f4}
+.objective-subitem{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:14px}
+.objective-subitem span{flex:1;overflow-wrap:anywhere}
+.objective-add{display:flex;gap:7px;margin-top:13px}
+.objective-add input{flex:1}
+.objective-add button{border:0;background:#3978e8;color:white;border-radius:9px;padding:0 15px;font-size:20px}
+.objective-back{margin-bottom:12px}
 @media(max-width:390px){.grid{grid-template-columns:1fr}.full{grid-column:auto}}
 </style>
 </head>
 <body>
 
+<div id="diaryPage">
 <header>
   <div class="top">
     <button class="today-btn" onclick="goToday()">Oggi</button>
@@ -148,10 +177,16 @@ label{display:block;font-size:13px;color:#626d7e;margin:12px 0 5px}
 
 <main>
   <section class="card">
-    <div class="card-head">
-      <h2>LISTE</h2>
-    </div>
+    <div class="card-head"><h2>LISTE</h2></div>
     <div id="sections"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>OBIETTIVI</h2>
+      <button class="secondary" onclick="openObjectives()">Apri</button>
+    </div>
+    <div class="muted">I tuoi obiettivi e i relativi progressi.</div>
   </section>
 
   <section class="card">
@@ -162,9 +197,7 @@ label{display:block;font-size:13px;color:#626d7e;margin:12px 0 5px}
   </section>
 
   <section class="card">
-    <div class="card-head">
-      <h2>ATTIVITÀ</h2>
-    </div>
+    <div class="card-head"><h2>ATTIVITÀ</h2></div>
     <div id="activityOverviewList"></div>
   </section>
 
@@ -353,6 +386,16 @@ label{display:block;font-size:13px;color:#626d7e;margin:12px 0 5px}
 <div class="bottom">
   <button class="plus" onclick="toggleMenu()">+</button>
 </div>
+</div>
+
+<!-- Pagina separata OBIETTIVI -->
+<div class="objectives-page" id="objectivesPage">
+  <div class="objectives-header">
+    <button onclick="closeObjectives()">‹ Diario</button>
+    <h2>OBIETTIVI</h2>
+  </div>
+  <div class="objectives-content" id="objectivesContent"></div>
+</div>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -374,12 +417,111 @@ let data={
   activityChecks:read('activityChecks',{}),
   archive:read('archive',[])
 };
+
+let objectives=read('objectives',[]);
 let selected=today(),cycleDraft=[],sectionDraft=[],sectionEditItems=null;
 let editingTaskId=null,editingSectionId=null;
 let calendarMonth=parseDate(selected),overviewExpanded=false;
+let currentObjectiveId=null;
+
+/* Sincronizzazione con il server Cloudflare */
+const SERVER_URL='https://server-app.sai9on.workers.dev/api/data';
+const APP_ID='diario';
+let syncReady=false,syncBusy=false,syncPending=false,lastServerSnapshot='';
+
+function serverSnapshot(){
+  return {...data,objectives};
+}
+function validServerData(d){
+  return d&&Array.isArray(d.shifts)&&Array.isArray(d.tasks)&&
+    Array.isArray(d.sections)&&d.checks&&typeof d.checks==='object'&&
+    d.items&&typeof d.items==='object';
+}
+function applyServerData(d){
+  data={
+    shifts:d.shifts||[],
+    cycle:d.cycle||null,
+    tasks:d.tasks||[],
+    sections:d.sections||[],
+    checks:d.checks||{},
+    items:d.items||{},
+    activityChecks:d.activityChecks||{},
+    archive:d.archive||[]
+  };
+  objectives=Array.isArray(d.objectives)?d.objectives:[];
+  for(let k in data)write(k,data[k]);
+  write('objectives',objectives);
+  render();
+}
+async function pushServer(){
+  if(!syncReady)return;
+  if(syncBusy){syncPending=true;return;}
+  syncBusy=true;
+  do{
+    syncPending=false;
+    let snapshot=serverSnapshot();
+    try{
+      let response=await fetch(SERVER_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({app_id:APP_ID,data:snapshot})
+      });
+      if(!response.ok)throw new Error('Salvataggio non riuscito');
+      lastServerSnapshot=JSON.stringify(snapshot);
+    }catch(error){
+      syncPending=true;
+      console.warn('Sincronizzazione non riuscita:',error);
+    }
+  }while(syncPending&&navigator.onLine);
+  syncBusy=false;
+}
+async function initServerSync(){
+  try{
+    let response=await fetch(SERVER_URL+'?app='+APP_ID);
+    if(!response.ok)throw new Error('Lettura server non riuscita');
+    let result=await response.json();
+    if(validServerData(result.data)){
+      applyServerData(result.data);
+      lastServerSnapshot=JSON.stringify(serverSnapshot());
+    }else{
+      lastServerSnapshot='';
+    }
+    syncReady=true;
+    if(!validServerData(result.data)||syncPending)pushServer();
+  }catch(error){
+    console.warn('Server non raggiungibile:',error);
+  }
+}
+async function checkServerUpdates(){
+  if(!navigator.onLine)return;
+  if(!syncReady){initServerSync();return;}
+  if(syncBusy||syncPending)return;
+  try{
+    let response=await fetch(SERVER_URL+'?app='+APP_ID);
+    if(!response.ok)return;
+    let result=await response.json();
+    if(!validServerData(result.data))return;
+    let remote=JSON.stringify(result.data);
+    if(remote!==lastServerSnapshot){
+      applyServerData(result.data);
+      lastServerSnapshot=JSON.stringify(serverSnapshot());
+    }
+  }catch(error){
+    console.warn('Controllo sincronizzazione non riuscito:',error);
+  }
+}
+window.addEventListener('online',()=>{
+  if(!syncReady)initServerSync();
+  else if(syncPending)pushServer();
+});
 
 function persist(){
   for(let k in data)write(k,data[k]);
+  write('objectives',objectives);
+  if(syncReady){
+    syncPending=true;
+    pushServer();
+  }
 }
 function safe(s){
   return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -755,7 +897,7 @@ function saveTask(){
     carryOver:mode==='carry'};
   if(editingTaskId){
     Object.assign(data.tasks.find(t=>t.id===editingTaskId),task);
-    editingTaskId=null;closeForms();render();
+    editingTaskId=null;closeForms();persist();render();
     $('activityManager').style.display='block';renderActivityManager();
   }else{
     data.tasks.push({id:uid(),...task});
@@ -1085,8 +1227,185 @@ function clearCycle(){
   data.cycle=null;cycleDraft=[];persist();renderShifts();render();
   if($('calendarOverlay').classList.contains('show'))renderCalendar();
 }
-$('cycleRepeats').addEventListener('input',renderCycle);
+
+/* Gestione obiettivi */
+function openObjectives(){
+  $('calendarOverlay').classList.remove('show');
+  $('settingsOverlay').classList.remove('show');
+  $('addMenu').classList.remove('show');
+  closeForms();
+  $('diaryPage').style.display='none';
+  $('objectivesPage').style.display='block';
+  currentObjectiveId=null;
+  renderObjectives();
+  window.scrollTo(0,0);
+}
+function closeObjectives(){
+  $('objectivesPage').style.display='none';
+  $('diaryPage').style.display='block';
+  currentObjectiveId=null;
+  window.scrollTo(0,0);
+}
+function renderObjectives(){
+  let content=$('objectivesContent');
+  if(currentObjectiveId){
+    let objective=objectives.find(o=>o.id===currentObjectiveId);
+    if(!objective){currentObjectiveId=null;return renderObjectives();}
+    let elements=objective.items||[];
+    let done=elements.filter(i=>i.done&&(i.subitems||[]).every(s=>s.done)).length;
+    content.innerHTML=`
+      <button class="secondary objective-back" onclick="currentObjectiveId=null;renderObjectives()">‹ Tutti gli obiettivi</button>
+      <div class="objective-detail">
+        <div class="objective-detail-title">${safe(objective.title)}</div>
+        <div class="muted">${done}/${elements.length} elementi completati</div>
+        ${elements.length?elements.map(item=>`
+          <div class="objective-element">
+            <div class="objective-element-line">
+              <input type="checkbox" ${item.done?'checked':''} onchange="toggleObjectiveItem('${item.id}',this.checked)">
+              <span class="objective-element-text ${item.done?'done':''}">${safe(item.text)}</span>
+              <div class="objective-item-actions">
+                <button onclick="editObjectiveItem('${item.id}')">✎</button>
+                <button onclick="deleteObjectiveItem('${item.id}')">×</button>
+              </div>
+            </div>
+            <div class="objective-subitems">
+              ${(item.subitems||[]).map(sub=>`
+                <div class="objective-subitem ${sub.done?'done':''}">
+                  <input type="checkbox" ${sub.done?'checked':''} onchange="toggleObjectiveSubitem('${item.id}','${sub.id}',this.checked)">
+                  <span>${safe(sub.text)}</span>
+                  <div class="objective-item-actions">
+                    <button onclick="editObjectiveSubitem('${item.id}','${sub.id}')">✎</button>
+                    <button onclick="deleteObjectiveSubitem('${item.id}','${sub.id}')">×</button>
+                  </div>
+                </div>`).join('')}
+              <div class="objective-add">
+                <input id="newSub_${item.id}" placeholder="Aggiungi sottovoce">
+                <button onclick="addObjectiveSubitem('${item.id}')">+</button>
+              </div>
+            </div>
+          </div>`).join(''):'<div class="empty">Aggiungi il primo elemento a questo obiettivo.</div>'}
+        <div class="objective-add">
+          <input id="newObjectiveItem" placeholder="Aggiungi un elemento">
+          <button onclick="addObjectiveItem()">+</button>
+        </div>
+      </div>`;
+    return;
+  }
+  content.innerHTML=`
+    <div class="objective-card">
+      <strong>Nuovo obiettivo</strong>
+      <div class="objective-add">
+        <input id="newObjectiveTitle" placeholder="Es. Comprare casa">
+        <button onclick="addObjective()">+</button>
+      </div>
+    </div>
+    ${objectives.length?objectives.map(o=>{
+      let items=o.items||[];
+      let completed=items.filter(i=>i.done&&(i.subitems||[]).every(s=>s.done)).length;
+      return `<div class="objective-card">
+        <div class="objective-card-head">
+          <span class="objective-title" onclick="openObjective('${o.id}')">${safe(o.title)}</span>
+          <div class="objective-actions">
+            <button onclick="openObjective('${o.id}')">Apri</button>
+            <button onclick="editObjective('${o.id}')">✎</button>
+            <button onclick="deleteObjective('${o.id}')">×</button>
+          </div>
+        </div>
+        <div class="objective-progress">${completed}/${items.length} elementi completati</div>
+      </div>`;
+    }).join(''):'<div class="empty">Non hai ancora creato obiettivi.</div>'}`;
+}
+function addObjective(){
+  let input=$('newObjectiveTitle'),title=input.value.trim();
+  if(!title)return;
+  objectives.push({id:uid(),title,items:[]});
+  persist();renderObjectives();
+}
+function openObjective(id){
+  currentObjectiveId=id;
+  renderObjectives();
+}
+function editObjective(id){
+  let o=objectives.find(x=>x.id===id);
+  if(!o)return;
+  let title=prompt('Nome dell’obiettivo:',o.title);
+  if(title===null)return;
+  title=title.trim();
+  if(!title)return alert('Il nome non può essere vuoto.');
+  o.title=title;persist();renderObjectives();
+}
+function deleteObjective(id){
+  if(!confirm('Eliminare questo obiettivo e tutti i suoi elementi?'))return;
+  objectives=objectives.filter(o=>o.id!==id);
+  persist();renderObjectives();
+}
+function addObjectiveItem(){
+  let input=$('newObjectiveItem'),text=input.value.trim();
+  if(!text)return;
+  let o=objectives.find(x=>x.id===currentObjectiveId);
+  if(!o)return;
+  if(!o.items)o.items=[];
+  o.items.push({id:uid(),text,done:false,subitems:[]});
+  persist();renderObjectives();
+}
+function toggleObjectiveItem(id,done){
+  let o=objectives.find(x=>x.id===currentObjectiveId);
+  let item=o&&o.items.find(x=>x.id===id);
+  if(item){item.done=done;persist();renderObjectives();}
+}
+function editObjectiveItem(id){
+  let o=objectives.find(x=>x.id===currentObjectiveId);
+  let item=o&&o.items.find(x=>x.id===id);
+  if(!item)return;
+  let text=prompt('Modifica elemento:',item.text);
+  if(text===null)return;
+  text=text.trim();
+  if(!text)return alert('Il testo non può essere vuoto.');
+  item.text=text;persist();renderObjectives();
+}
+function deleteObjectiveItem(id){
+  if(!confirm('Eliminare questo elemento e le sue sottovoci?'))return;
+  let o=objectives.find(x=>x.id===currentObjectiveId);
+  if(o)o.items=o.items.filter(x=>x.id!==id);
+  persist();renderObjectives();
+}
+function addObjectiveSubitem(id){
+  let input=$('newSub_'+id),text=input.value.trim();
+  if(!text)return;
+  let o=objectives.find(x=>x.id===currentObjectiveId);
+  let item=o&&o.items.find(x=>x.id===id);
+  if(!item)return;
+  if(!item.subitems)item.subitems=[];
+  item.subitems.push({id:uid(),text,done:false});
+  persist();renderObjectives();
+}
+function toggleObjectiveSubitem(itemId,subId,done){
+  let o=objectives.find(x=>x.id===currentObjectiveId);
+  let item=o&&o.items.find(x=>x.id===itemId);
+  let sub=item&&(item.subitems||[]).find(x=>x.id===subId);
+  if(sub){sub.done=done;persist();renderObjectives();}
+}
+function editObjectiveSubitem(itemId,subId){
+  let o=objectives.find(x=>x.id===currentObjectiveId);
+  let item=o&&o.items.find(x=>x.id===itemId);
+  let sub=item&&(item.subitems||[]).find(x=>x.id===subId);
+  if(!sub)return;
+  let text=prompt('Modifica sottovoce:',sub.text);
+  if(text===null)return;
+  text=text.trim();
+  if(!text)return alert('Il testo non può essere vuoto.');
+  sub.text=text;persist();renderObjectives();
+}
+function deleteObjectiveSubitem(itemId,subId){
+  let o=objectives.find(x=>x.id===currentObjectiveId);
+  let item=o&&o.items.find(x=>x.id===itemId);
+  if(item)item.subitems=(item.subitems||[]).filter(x=>x.id!==subId);
+  persist();renderObjectives();
+}
+
 render();
+initServerSync();
+setInterval(checkServerUpdates,5000);
 </script>
 </body>
 </html>
