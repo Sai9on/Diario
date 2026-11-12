@@ -81,7 +81,7 @@ label{display:block;font-size:13px;color:#626d7e;margin:12px 0 5px}
 .item-add{display:flex;gap:7px;margin-top:8px}
 .item-add input{flex:1}
 .danger{color:#d34b54}
-.overlay{display:none;position:fixed;inset:0;background:#20273555;z-index:20;align-items:flex-start;justify-content:center;padding:90px 18px 20px}
+.overlay{display:none;position:fixed;inset:0;background:#20273555;z-index:20;align-items:flex-start;justify-content:center;padding:90px 18px 20px;overflow-y:auto}
 .overlay.show{display:flex}
 .popup{background:white;border-radius:17px;width:100%;max-width:360px;padding:16px;box-shadow:0 8px 30px #20273525}
 .popup-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}
@@ -130,7 +130,50 @@ label{display:block;font-size:13px;color:#626d7e;margin:12px 0 5px}
 .objective-add input{flex:1}
 .objective-add button{border:0;background:#3978e8;color:white;border-radius:9px;padding:0 15px;font-size:20px}
 .objective-back{margin-bottom:12px}
-@media(max-width:390px){.grid{grid-template-columns:1fr}.full{grid-column:auto}}
+
+/* Pagina autonoma COUNTER */
+.counter-page{display:none;min-height:100vh;background:#f5f6f8;padding-bottom:35px}
+.counter-header{background:white;padding:18px 16px;border-bottom:1px solid #e8eaf0;display:flex;align-items:center;gap:14px}
+.counter-header button{border:0;background:#f0f2f6;border-radius:10px;padding:9px 13px;color:#30394a}
+.counter-header h2{flex:1;text-align:center;font-size:17px;margin-right:45px}
+.counter-content{max-width:680px;margin:auto;padding:16px 12px}
+.counter-card{background:white;border-radius:14px;padding:15px;margin-bottom:11px;box-shadow:0 2px 8px #20273506;touch-action:pan-y}
+.counter-card.down{background:#eaf7fd}
+.counter-card-head{display:flex;align-items:center;gap:8px}
+.counter-name{flex:1;text-align:left;border:1px solid #e4e7ed;border-radius:9px;background:#fff;padding:8px 10px;color:#30394a;font-weight:600;overflow-wrap:anywhere}
+.counter-card.down .counter-name{background:#f7fcff}
+.counter-value{font-size:14px;font-weight:600;color:#626d7e;text-align:right;white-space:nowrap}
+.counter-date{font-size:12px;color:#8992a1;margin-top:9px}
+.counter-actions{display:flex;gap:7px;margin-top:11px}
+.counter-actions button{border:0;background:#f0f2f6;color:#626d7e;border-radius:8px;padding:8px 11px}
+.counter-actions .counter-delete{color:#d34b54}
+.counter-add-card{background:white;border-radius:14px;padding:15px;margin-bottom:12px}
+.counter-add-card .primary{margin-top:12px}
+.counter-detail{background:white;border-radius:14px;padding:18px;box-shadow:0 2px 8px #20273506}
+.counter-detail-name{font-size:19px;font-weight:700;text-align:center;overflow-wrap:anywhere}
+.counter-detail-value{font-size:24px;font-weight:700;text-align:center;margin:22px 0;color:#3978e8}
+.counter-detail-units{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.counter-detail-units div{background:#f5f6f8;border-radius:9px;padding:10px 3px}
+.counter-detail-units strong{display:block;font-size:18px}
+.counter-detail-units small{font-size:10px;color:#8992a1}
+.counter-detail-date{text-align:center;font-size:13px;color:#8992a1;margin-top:18px}
+.counter-form{background:white;border-radius:14px;padding:16px;margin-bottom:12px}
+.counter-form .primary{margin-top:14px}
+.counter-form .cancel{margin-top:5px}
+.counter-edit-mode .counter-card{animation:counter-wiggle .22s ease-in-out infinite alternate}
+@keyframes counter-wiggle{from{transform:rotate(-.35deg)}to{transform:rotate(.35deg)}}
+.counter-day-events{margin-bottom:13px}
+.counter-day-event{display:flex;align-items:center;gap:9px;padding:10px 11px;margin-top:7px;border-radius:9px;background:#eaf7fd;border-left:3px solid #3978e8;font-size:13px}
+.counter-day-event.up{background:#f5f6f8;border-left-color:#18a779}
+.counter-day-event span{flex:1;overflow-wrap:anywhere}
+.counter-day-event small{color:#8992a1;white-space:nowrap}
+.counter-swipe-delete{display:none}
+@media(max-width:390px){
+  .grid{grid-template-columns:1fr}
+  .full{grid-column:auto}
+  .counter-value{font-size:12px}
+  .counter-detail-units strong{font-size:16px}
+}
 </style>
 </head>
 <body>
@@ -172,6 +215,7 @@ label{display:block;font-size:13px;color:#626d7e;margin:12px 0 5px}
     <button class="settings-option" onclick="openShiftManagement()">◷ Gestione turni</button>
     <button class="settings-option" onclick="openActivityManager()">✎ Modifica liste / attività</button>
     <button class="settings-option" onclick="openHistory()">▤ Storico attività</button>
+    <button class="settings-option" onclick="openCounter()">◷ Counter</button>
   </div>
 </div>
 
@@ -187,6 +231,11 @@ label{display:block;font-size:13px;color:#626d7e;margin:12px 0 5px}
       <button class="secondary" onclick="openObjectives()">Apri</button>
     </div>
     <div class="muted">I tuoi obiettivi e i relativi progressi.</div>
+  </section>
+
+  <section class="card counter-day-events" id="counterDayCard" style="display:none">
+    <div class="card-head"><h2>COUNTER</h2></div>
+    <div id="counterDayEvents"></div>
   </section>
 
   <section class="card">
@@ -397,6 +446,26 @@ label{display:block;font-size:13px;color:#626d7e;margin:12px 0 5px}
   <div class="objectives-content" id="objectivesContent"></div>
 </div>
 
+<!-- Pagina separata COUNTER -->
+<div class="counter-page" id="counterPage">
+  <div class="counter-header">
+    <button onclick="closeCounter()">‹ Diario</button>
+    <h2>COUNTER</h2>
+  </div>
+  <div class="counter-content" id="counterContent"></div>
+</div>
+
+<!-- Dettaglio contatore -->
+<div class="overlay" id="counterDetailOverlay" onclick="closeCounterDetail(event)">
+  <div class="popup" style="max-width:420px" onclick="event.stopPropagation()">
+    <div class="popup-head">
+      <h2>Dettaglio</h2>
+      <button class="close-btn" onclick="closeCounterDetail()">×</button>
+    </div>
+    <div id="counterDetailContent"></div>
+  </div>
+</div>
+
 <script>
 const $=id=>document.getElementById(id);
 const today=()=>dateStr(new Date());
@@ -419,10 +488,12 @@ let data={
 };
 
 let objectives=read('objectives',[]);
+let counters=read('contatori',[]);
 let selected=today(),cycleDraft=[],sectionDraft=[],sectionEditItems=null;
 let editingTaskId=null,editingSectionId=null;
 let calendarMonth=parseDate(selected),overviewExpanded=false;
 let currentObjectiveId=null;
+let currentCounterId=null,counterEditingId=null,counterEditMode=false;
 
 /* Sincronizzazione con il server Cloudflare */
 const SERVER_URL='https://server-app.sai9on.workers.dev/api/data';
@@ -430,7 +501,7 @@ const APP_ID='diario';
 let syncReady=false,syncBusy=false,syncPending=false,lastServerSnapshot='';
 
 function serverSnapshot(){
-  return {...data,objectives};
+  return {...data,objectives,counters};
 }
 function validServerData(d){
   return d&&Array.isArray(d.shifts)&&Array.isArray(d.tasks)&&
@@ -449,9 +520,12 @@ function applyServerData(d){
     archive:d.archive||[]
   };
   objectives=Array.isArray(d.objectives)?d.objectives:[];
+  counters=Array.isArray(d.counters)?d.counters:[];
   for(let k in data)write(k,data[k]);
   write('objectives',objectives);
+  write('contatori',counters);
   render();
+  if($('counterPage').style.display==='block')renderCounters();
 }
 async function pushServer(){
   if(!syncReady)return;
@@ -518,6 +592,7 @@ window.addEventListener('online',()=>{
 function persist(){
   for(let k in data)write(k,data[k]);
   write('objectives',objectives);
+  write('contatori',counters);
   if(syncReady){
     syncPending=true;
     pushServer();
@@ -573,8 +648,9 @@ function renderCalendar(){
     let isRest=shift&&shift.name.trim().toLowerCase()==='riposo';
     let initial=shift?safe(isRest?'R':shift.name.trim().charAt(0).toUpperCase()):'';
     let style=shift&&!isRest?`style="background:${shift.color}25;color:${shift.color}"`:'';
+    let hasCounter=counters.some(c=>counterEventDate(c)===date);
     html+=`<button class="calendar-day ${other?'other':''} ${date===selected?'selected':''} ${date===today()?'today':''}" ${style} onclick="selectCalendarDate('${date}')">
-      <strong>${day}</strong>${shift?`<small>${initial}</small>`:''}
+      <strong>${day}</strong>${shift?`<small>${initial}</small>`:''}${hasCounter?'<small style="color:#3978e8">●</small>':''}
     </button>`;
   }
   $('calendarGrid').innerHTML=html;
@@ -715,6 +791,7 @@ function render(){
   renderTimeline();
   renderSections();
   renderActivityOverview();
+  renderCounterDayEvents();
   if($('activityManager').style.display==='block')renderActivityManager();
 }
 function renderActivityOverview(){
@@ -1403,9 +1480,268 @@ function deleteObjectiveSubitem(itemId,subId){
   persist();renderObjectives();
 }
 
+/* Gestione COUNTER */
+function openCounter(){
+  $('settingsOverlay').classList.remove('show');
+  $('diaryPage').style.display='none';
+  $('objectivesPage').style.display='none';
+  $('counterPage').style.display='block';
+  currentCounterId=null;
+  counterEditingId=null;
+  counterEditMode=false;
+  renderCounters();
+  window.scrollTo(0,0);
+}
+function closeCounter(){
+  $('counterPage').style.display='none';
+  $('counterDetailOverlay').classList.remove('show');
+  $('diaryPage').style.display='block';
+  currentCounterId=null;
+  counterEditingId=null;
+  counterEditMode=false;
+  window.scrollTo(0,0);
+}
+function counterEventDate(c){
+  let timestamp=c.mode==='up'?c.startTimestamp:c.targetTimestamp;
+  if(!timestamp)return '';
+  return dateStr(new Date(timestamp));
+}
+function counterDateLabel(c){
+  let timestamp=c.mode==='up'?c.startTimestamp:c.targetTimestamp;
+  if(!timestamp)return '';
+  return new Date(timestamp).toLocaleString('it-IT',{
+    day:'numeric',month:'long',year:'numeric',
+    hour:'2-digit',minute:'2-digit'
+  });
+}
+function counterParts(c){
+  let now=Date.now();
+  let timestamp=c.mode==='up'?c.startTimestamp:c.targetTimestamp;
+  let seconds=Math.max(0,Math.floor((c.mode==='up'?now-timestamp:timestamp-now)/1000));
+  return {
+    total:seconds,
+    days:Math.floor(seconds/86400),
+    hours:Math.floor(seconds%86400/3600),
+    minutes:Math.floor(seconds%3600/60),
+    seconds:seconds%60,
+    expired:c.mode==='down'&&now>=timestamp
+  };
+}
+function counterCompact(c){
+  let p=counterParts(c);
+  if(p.expired)return 'Scaduto';
+  if(p.days>0)return `${p.days}g ${p.hours}h`;
+  if(p.hours>0)return `${p.hours}h ${p.minutes}m`;
+  return `${p.minutes}m ${p.seconds}s`;
+}
+function counterFull(c){
+  let p=counterParts(c);
+  return `${p.days} giorni · ${p.hours} ore · ${p.minutes} minuti · ${p.seconds} secondi`;
+}
+function renderCounters(){
+  let content=$('counterContent');
+  let html=`
+    <div class="counter-add-card">
+      <div class="card-head">
+        <h2>${counterEditingId?'Modifica contatore':'Nuovo contatore'}</h2>
+        <button class="secondary" onclick="toggleCounterEdit()">${counterEditMode?'Fine':'Modifica'}</button>
+      </div>
+      <label>Nome</label>
+      <input id="counterName" placeholder="Es. Ultima sigaretta, vacanza, obiettivo">
+      <label>Tipo</label>
+      <select id="counterMode" onchange="updateCounterForm()">
+        <option value="up">Conta da quando</option>
+        <option value="down">Conta quanto manca</option>
+      </select>
+      <label id="counterDateLabel">Data e ora di inizio</label>
+      <input id="counterDate" type="datetime-local">
+      <button class="primary" onclick="saveCounter()">${counterEditingId?'Salva modifiche':'Aggiungi contatore'}</button>
+      ${counterEditingId?'<button class="cancel" onclick="cancelCounterEdit()">Annulla modifica</button>':''}
+    </div>
+    <div id="counterList"></div>`;
+  content.innerHTML=html;
+  if(counterEditingId){
+    let c=counters.find(x=>x.id===counterEditingId);
+    if(c){
+      $('counterName').value=c.name;
+      $('counterMode').value=c.mode;
+      $('counterDate').value=toLocalDateTime(c.mode==='up'?c.startTimestamp:c.targetTimestamp);
+      updateCounterForm();
+    }
+  }
+  renderCounterList();
+}
+function toLocalDateTime(timestamp){
+  let d=new Date(timestamp);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function updateCounterForm(){
+  let mode=$('counterMode').value;
+  $('counterDateLabel').textContent=mode==='up'?'Data e ora di inizio':'Data e ora della scadenza';
+}
+function saveCounter(){
+  let name=$('counterName').value.trim();
+  let mode=$('counterMode').value;
+  let dateValue=$('counterDate').value;
+  if(!name)return alert('Inserisci il nome del contatore.');
+  if(!dateValue)return alert('Inserisci una data e un orario.');
+  let timestamp=new Date(dateValue).getTime();
+  if(!Number.isFinite(timestamp))return alert('Inserisci una data valida.');
+  if(mode==='down'&&timestamp<=Date.now())return alert('La scadenza deve essere nel futuro.');
+  if(counterEditingId){
+    let c=counters.find(x=>x.id===counterEditingId);
+    if(c){
+      c.name=name;
+      c.mode=mode;
+      delete c.startTimestamp;
+      delete c.targetTimestamp;
+      if(mode==='up')c.startTimestamp=timestamp;
+      else c.targetTimestamp=timestamp;
+    }
+  }else{
+    counters.push({
+      id:uid(),
+      name,
+      mode,
+      ...(mode==='up'?{startTimestamp:timestamp}:{targetTimestamp:timestamp})
+    });
+  }
+  counterEditingId=null;
+  persist();
+  renderCounters();
+  renderCounterDayEvents();
+  if($('calendarOverlay').classList.contains('show'))renderCalendar();
+}
+function cancelCounterEdit(){
+  counterEditingId=null;
+  renderCounters();
+}
+function editCounter(id){
+  counterEditingId=id;
+  renderCounters();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function deleteCounter(id){
+  if(!confirm('Eliminare definitivamente questo contatore?'))return;
+  counters=counters.filter(c=>c.id!==id);
+  if(currentCounterId===id)currentCounterId=null;
+  persist();
+  renderCounters();
+  renderCounterDayEvents();
+  if($('calendarOverlay').classList.contains('show'))renderCalendar();
+}
+function resetCounter(id){
+  let c=counters.find(x=>x.id===id);
+  if(!c)return;
+  if(c.mode==='up'){
+    if(!confirm('Vuoi far ripartire questo contatore da adesso?'))return;
+    c.startTimestamp=Date.now();
+  }else{
+    let value=prompt('Inserisci la nuova data e ora della scadenza (AAAA-MM-GG HH:MM):');
+    if(value===null)return;
+    let timestamp=new Date(value.replace(' ','T')).getTime();
+    if(!Number.isFinite(timestamp)||timestamp<=Date.now())
+      return alert('Inserisci una data futura valida.');
+    c.targetTimestamp=timestamp;
+  }
+  persist();
+  renderCounters();
+  renderCounterDayEvents();
+  if($('calendarOverlay').classList.contains('show'))renderCalendar();
+  if($('counterDetailOverlay').classList.contains('show'))showCounterDetail(id);
+}
+function renderCounterList(){
+  let list=$('counterList');
+  if(!counters.length){
+    list.innerHTML='<div class="empty">Non hai ancora creato contatori.</div>';
+    return;
+  }
+  list.innerHTML=counters.map(c=>`
+    <div class="counter-card ${c.mode==='down'?'down':''}" data-counter="${c.id}">
+      <div class="counter-card-head">
+        <button class="counter-name" onclick="showCounterDetail('${c.id}')">${safe(c.name)}</button>
+        <span class="counter-value">${counterCompact(c)}</span>
+      </div>
+      <div class="counter-date">${c.mode==='up'?'Dal ':'Scadenza: '}${counterDateLabel(c)}</div>
+      <div class="counter-actions">
+        <button onclick="resetCounter('${c.id}')">↻ Azzera</button>
+        <button onclick="editCounter('${c.id}')">Modifica</button>
+        <button class="counter-delete" onclick="deleteCounter('${c.id}')">Elimina</button>
+      </div>
+    </div>`).join('');
+}
+function showCounterDetail(id){
+  let c=counters.find(x=>x.id===id);
+  if(!c)return;
+  currentCounterId=id;
+  let p=counterParts(c);
+  $('counterDetailContent').innerHTML=`
+    <div class="counter-detail">
+      <div class="counter-detail-name">${safe(c.name)}</div>
+      <div class="counter-detail-value">${counterCompact(c)}</div>
+      <div class="counter-detail-units">
+        <div><strong>${p.days}</strong><small>GIORNI</small></div>
+        <div><strong>${p.hours}</strong><small>ORE</small></div>
+        <div><strong>${p.minutes}</strong><small>MINUTI</small></div>
+        <div><strong>${p.seconds}</strong><small>SECONDI</small></div>
+      </div>
+      <div class="counter-detail-date">${c.mode==='up'?'Iniziato il ':'Scadenza: '}${counterDateLabel(c)}</div>
+      <div class="counter-actions" style="justify-content:center">
+        <button onclick="resetCounter('${c.id}')">↻ Azzera</button>
+        <button onclick="editCounterFromDetail('${c.id}')">Modifica</button>
+        <button class="counter-delete" onclick="deleteCounterFromDetail('${c.id}')">Elimina</button>
+      </div>
+    </div>`;
+  $('counterDetailOverlay').classList.add('show');
+}
+function editCounterFromDetail(id){
+  $('counterDetailOverlay').classList.remove('show');
+  editCounter(id);
+}
+function deleteCounterFromDetail(id){
+  $('counterDetailOverlay').classList.remove('show');
+  deleteCounter(id);
+}
+function closeCounterDetail(event){
+  if(!event||event.target===$('counterDetailOverlay'))
+    $('counterDetailOverlay').classList.remove('show');
+}
+function toggleCounterEdit(){
+  counterEditMode=!counterEditMode;
+  renderCounters();
+}
+function renderCounterDayEvents(){
+  let events=counters.filter(c=>counterEventDate(c)===selected);
+  let card=$('counterDayCard');
+  if(!events.length){
+    card.style.display='none';
+    $('counterDayEvents').innerHTML='';
+    return;
+  }
+  card.style.display='block';
+  $('counterDayEvents').innerHTML=events.map(c=>`
+    <div class="counter-day-event ${c.mode==='up'?'up':''}">
+      <span><strong>${safe(c.name)}</strong><br>${c.mode==='up'?'Inizio del contatore':'Data obiettivo'}</span>
+      <small>${c.mode==='up'?'Da quando':'Scadenza'}</small>
+      <button class="icon-btn" onclick="openCounterFromDiary('${c.id}')">›</button>
+    </div>`).join('');
+}
+function openCounterFromDiary(id){
+  openCounter();
+  showCounterDetail(id);
+}
+function updateCounterClocks(){
+  if($('counterPage').style.display==='block'){
+    let list=$('counterList');
+    if(list)renderCounterList();
+  }
+  if($('counterDetailOverlay').classList.contains('show')&&currentCounterId)
+    showCounterDetail(currentCounterId);
+}
 render();
 initServerSync();
 setInterval(checkServerUpdates,5000);
+setInterval(updateCounterClocks,1000);
 </script>
 </body>
 </html>
